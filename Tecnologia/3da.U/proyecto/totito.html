@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tres en Raya Neon</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #0ff;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    h1 {
+      text-shadow: 0 0 10px #0ff;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 10px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background-color: #111;
+      border: 2px solid #0ff;
+      font-size: 60px;
+      color: #0ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-shadow: 0 0 10px #0ff;
+      transition: transform 0.2s;
+    }
+
+    .cell:hover {
+      transform: scale(1.05);
+      background-color: #222;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 24px;
+      text-shadow: 0 0 10px #0ff;
+    }
+
+    button {
+      margin-top: 10px;
+      background: black;
+      border: 2px solid #0ff;
+      color: #0ff;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      text-shadow: 0 0 8px #0ff;
+    }
+
+    button:hover {
+      background-color: #111;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tres en Raya Neon</h1>
+  <div class="board" id="board"></div>
+  <div class="status" id="status">Turno: X</div>
+  <button onclick="resetGame()">Reiniciar</button>
+
+  <script>
+    const board = document.getElementById('board');
+    const status = document.getElementById('status');
+    let cells = [];
+    let currentPlayer = 'X';
+    let gameActive = true;
+
+    function createBoard() {
+      board.innerHTML = '';
+      cells = [];
+
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.addEventListener('click', () => handleClick(i));
+        board.appendChild(cell);
+        cells.push('');
+      }
+    }
+
+    function handleClick(index) {
+      if (!gameActive || cells[index]) return;
+
+      cells[index] = currentPlayer;
+      board.children[index].textContent = currentPlayer;
+
+      if (checkWinner()) {
+        status.textContent = `¡${currentPlayer} gana!`;
+        gameActive = false;
+      } else if (cells.every(cell => cell)) {
+        status.textContent = '¡Empate!';
+        gameActive = false;
+      } else {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        status.textContent = `Turno: ${currentPlayer}`;
+      }
+    }
+
+    function checkWinner() {
+      const winConditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], 
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], 
+        [0, 4, 8], [2, 4, 6]             
+      ];
+
+      return winConditions.some(([a, b, c]) => {
+        return cells[a] && cells[a] === cells[b] && cells[a] === cells[c];
+      });
+    }
+ function resetGame() {
+      currentPlayer = 'X';
+      gameActive = true;
+      status.textContent = `Turno: ${currentPlayer}`;
+      createBoard();
+    }
+     createBoard();
+  
