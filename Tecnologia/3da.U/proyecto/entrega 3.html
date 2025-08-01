@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tres en Raya Neon</title>
+  <style>
+    body {
+      background-color: black;
+      color: #0ff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin-top: 30px;
+      text-shadow: 0 0 10px #0ff;
+    }
+
+    #menu {
+      margin: 20px;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background-color: #111;
+      border: 2px solid #0ff;
+      font-size: 48px;
+      color: #0ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-shadow: 0 0 8px #0ff;
+    }
+
+    .cell.disabled {
+      pointer-events: none;
+    }
+
+    #status, #timer {
+      font-size: 20px;
+      margin-top: 10px;
+      text-shadow: 0 0 5px #0ff;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      background: #0ff;
+      color: black;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #0ff;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Totito Neón</h1>
+
+  <div id="menu">
+    <label for="mode">Modo:</label>
+    <select id="mode">
+      <option value="2p">2 Jugadores</option>
+      <option value="ai-easy">Contra IA (Fácil)</option>
+      <option value="ai-hard">Contra IA (Difícil)</option>
+    </select>
+    <button onclick="startGame()">Iniciar</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="timer"></div>
+  <div id="board"></div>
+
+  <button onclick="startGame()">Reiniciar</button>
+
+  <script>
+    const boardElement = document.getElementById('board');
+    const statusElement = document.getElementById('status');
+    const timerElement = document.getElementById('timer');
+    const modeSelect = document.getElementById('mode');
+
+    let board = Array(9).fill('');
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let gameMode = '2p';
+    let timeLeft = 10;
+    let timerInterval;
+
+    const winningCombos = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function startGame() {
+      board = Array(9).fill('');
+      currentPlayer = 'X';
+      gameActive = true;
+      gameMode = modeSelect.value;
+      statusElement.textContent = 'Turno: X';
+      renderBoard();
+      resetTimer();
+    }
+
+    function renderBoard() {
+      boardElement.innerHTML = '';
+      board.forEach((cell, index) => {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.textContent = cell;
+        if (cell || !gameActive) div.classList.add('disabled');
+        div.addEventListener('click', () => handleMove(index));
+        boardElement.appendChild(div);
+      });
+    }
+
+    function handleMove(index) {
+      if (!gameActive || board[index]) return;
+
+      board[index] = currentPlayer;
+      renderBoard();
+
+      if (checkWinner(currentPlayer)) {
+        statusElement.textContent = `¡${currentPlayer} ha ganado!`;
+        endGame();
+        return;
+      }
+
+      if (!board.includes('')) {
+        statusElement.textContent = '¡Empate!';
+        endGame();
+        return;
+      }
+
+      switchPlayer();
+
+      if (gameMode.includes('ai') && currentPlayer === 'O') {
+        setTimeout(() => {
+          aiMove();
+        }, 500);
+      }
+    }
+
+    function switchPlayer() {
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      statusElement.textContent = `Turno: ${currentPlayer}`;
+      resetTimer();
+    }
+
+    function checkWinner(player) {
+      return winningCombos.some(combo =>
+        combo.every(index => board[index] === player)
+      );
+    }
+
+    function endGame() {
+      gameActive = false;
+      clearInterval(timerInterval);
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timeLeft = 10;
+      timerElement.textContent = `Tiempo restante: ${timeLeft}s`;
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerElement.textContent = `Tiempo restante: ${timeLeft}s`;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          statusElement.textContent = `¡Tiempo agotado!`;
+          switchPlayer();
+          if (gameMode.includes('ai') && currentPlayer === 'O') {
+            setTimeout(() => {
+              aiMove();
+            }, 300);
+          }
+        }
+      }, 1000);
+    }
+
+    function aiMove() {
+      if (!gameActive) return;
+      let index;
+      if (gameMode === 'ai-easy') {
+        // Movimiento aleatorio
+        const emptyCells = board.map((val, i) => val === '' ? i : null).filter(v => v !== null);
+        index = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      } else {
+        // IA difícil con Minimax
+        index = minimax(board, 'O').index;
+      }
+
+      if (index != null) {
+        board[index] = 'O';
+        renderBoard();
+        if (checkWinner('O')) {
+          statusElement.textContent = `¡O ha ganado!`;
+          endGame();
+          return;
+        }
+        if (!board.includes('')) {
+          statusElement.textContent = '¡Empate!';
+          endGame();
+          return;
+        }
+        switchPlayer();
+      }
+    }
+
+    // Minimax para dificultad difícil
+    function minimax(newBoard, player) {
+      const huPlayer = 'X';
+      const aiPlayer = 'O';
+      const availSpots = newBoard.map((val, i) => val === '' ? i : null).filter(v => v !== null);
+
+      if (checkWinnerMini(newBoard, huPlayer)) {
+        return {score: -10};
+      } else if (checkWinnerMini(newBoard, aiPlayer)) {
+        return {score: 10};
+      } else if (availSpots.length === 0) {
+        return {score: 0};
+      }
+
+      const moves = [];
+
+      for (let i = 0; i < availSpots.length; i++) {
+        const move = {};
+        move.index = availSpots[i];
+        newBoard[availSpots[i]] = player;
+
+        const result = minimax(newBoard, player === aiPlayer ? huPlayer : aiPlayer);
+        move.score = result.score;
+
+        newBoard[availSpots[i]] = '';
+        moves.push(move);
+      }
+
+      let bestMove;
+      if (player === aiPlayer) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score > bestScore) {
+            bestScore = moves[i].score;
+            bestMove = i;
+          }
+        }
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score < bestScore) {
+            bestScore = moves[i].score;
+            bestMove = i;
+          }
+        }
+      }
+
+      return moves[bestMove];
+    }
+
+    function checkWinnerMini(boardState, player) {
+      return winningCombos.some(combo =>
+        combo.every(index => boardState[index] === player)
+      );
+    }
+
+    startGame();
+  </script>
+
+</body>
+</html>
